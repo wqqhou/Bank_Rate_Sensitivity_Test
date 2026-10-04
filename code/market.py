@@ -148,11 +148,11 @@ def read_stock(companies):
             s[column] = pd.to_datetime(s[column])
 
         # 2. Match security history at month start and retain US ordinary common
-        # shares (Y/CORP-or-ACOR/EQTY/COM/NS) on N/A/Q exchanges, preserving eligible delisting-month returns.
+        # shares on all six identified US listing exchanges; other/missing codes do not identify a listing.
         s = s.loc[s.month.ge(s.SecInfoStartDt) & s.month.le(s.SecInfoEndDt)]
         ordinary = s.USIncFlg.eq("Y") & s.IssuerType.isin(["CORP", "ACOR"])
         ordinary &= s.SecurityType.eq("EQTY") & s.SecuritySubType.eq("COM") & s.ShareType.eq("NS")
-        ordinary &= s.PrimaryExch.isin(["N", "A", "Q"])
+        ordinary &= s.PrimaryExch.isin(["N", "A", "Q", "R", "B", "I"])
         parts.append(s.loc[ordinary])
     stock = pd.concat(parts, ignore_index=True)
 
@@ -301,6 +301,7 @@ def run_market(bank_panel, output_dir, figure_dir):
         "index_last_value": float(index.price_index.iloc[-1]), "publication_delay_days": PUBLICATION_DAYS,
         "regression_table": str(table_path), "price_figure": str(figure_path),
         "method": "Direct RSSD links take priority over BHC links; ambiguous company links excluded. "
+                  "US ordinary common shares on all identified CRSP listing exchanges (N/A/Q/R/B/I). "
                   "Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. "
                   "Quarter-end +120 days is an assumed publication date, not an observed filing date. "
                   "Company and month fixed effects; SE clustered by company and month. "

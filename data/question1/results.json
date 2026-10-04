@@ -209,7 +209,7 @@
     "publication_delay_days": 120,
     "regression_table": "/Users/matt/Desktop/FMC_RP_EXAM_2026/data/question1/stock_return_regression.csv",
     "price_figure": "/Users/matt/Desktop/FMC_RP_EXAM_2026/report/figures/bank_stock_price_index.pdf",
-    "method": "Direct RSSD links take priority over BHC links; ambiguous company links excluded. Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. Quarter-end +120 days is an assumed publication date, not an observed filing date. Company and month fixed effects; SE clustered by company and month. ROA and capital ratios winsorized at .5/99.5 percentiles within accounting quarter; returns untrimmed.",
+    "method": "Direct RSSD links take priority over BHC links; ambiguous company links excluded. US ordinary common shares on all identified CRSP listing exchanges (N/A/Q/R/B/I). Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. Quarter-end +120 days is an assumed publication date, not an observed filing date. Company and month fixed effects; SE clustered by company and month. ROA and capital ratios winsorized at .5/99.5 percentiles within accounting quarter; returns untrimmed.",
     "crsp_reference": "https://wrds-www.wharton.upenn.edu/pages/wrds-research/macros/crsp-ciztosiz-macro/"
   },
   "without_winsorization": {
