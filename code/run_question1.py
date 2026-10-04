@@ -177,7 +177,7 @@ def main():
     report_numbers(audit, eligibility, summary, banks, market, robustness)
     results = {"data_audit": audit, "beta_summary": summary, "bank_inference": INFERENCE, "bank_analysis": banks,
                "market": market, "without_winsorization": robustness,
-               "reported_time_minutes": {"part1": 20, "part2": 90, "part3": 90}}
+               "reported_time_minutes": {"part1": 120, "part2": 240, "part3": 180}}
     (OUTPUT / "results.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     print(f"Complete: {OUTPUT}\nCompile: latexmk -pdf -cd report/main.tex", flush=True)
 

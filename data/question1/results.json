@@ -22,10 +22,10 @@
       "Banks": 10399,
       "Mean": 0.3691727072885274,
       "SD": 0.1592305406736448,
-      "P25": 0.2758381358508558,
-      "Median": 0.3542320534865424,
+      "P25": 0.2758381358508559,
+      "Median": 0.3542320534865422,
       "P75": 0.44741375742366907,
-      "Median HAC SE": 0.08179786011523832,
+      "Median HAC SE": 0.08179786011523806,
       "Significant (%)": 86.03711895374555,
       "Valid tests": 10399,
       "Unavailable tests": 0
@@ -36,8 +36,8 @@
       "SD": 0.10376933700865124,
       "P25": 0.2976185406547198,
       "Median": 0.351761472193644,
-      "P75": 0.4099855651863339,
-      "Median HAC SE": 0.05220216660419478,
+      "P75": 0.409985565186334,
+      "Median HAC SE": 0.05220216660419481,
       "Significant (%)": 95.74877368471675,
       "Valid tests": 10397,
       "Unavailable tests": 2
@@ -46,14 +46,23 @@
       "Banks": 10439,
       "Mean": 0.024925126316914677,
       "SD": 0.2934883647681366,
-      "P25": -0.08587936107488878,
-      "Median": 0.007319825311525627,
-      "P75": 0.11024719873538633,
-      "Median HAC SE": 0.16650114027114246,
+      "P25": -0.0858793610748887,
+      "Median": 0.007319825311525754,
+      "P75": 0.11024719873538613,
+      "Median HAC SE": 0.1665011402711427,
       "Significant (%)": 2.797202797202797,
       "Valid tests": 10439,
       "Unavailable tests": 0
     }
+  },
+  "bank_inference": {
+    "null": "Sum of four policy slopes equals zero for each bank and outcome",
+    "hac_lags": 4,
+    "covariance": "Calendar-quarter Bartlett HAC with n/(n-5) correction",
+    "reference_distribution": "Two-sided asymptotic normal (one-restriction Wald)",
+    "alpha": 0.05,
+    "multiple_testing": "Unadjusted",
+    "unavailable_tests": "Excluded from inference summaries, retained in beta distributions"
   },
   "bank_analysis": {
     "n_bank_quarters": 1105619,
@@ -194,22 +203,22 @@
     "duplicate_security_month_rows_removed": 556,
     "invalid_stock_security_months_removed": 20,
     "usable_security_months": 83635,
-    "regression_nobs": 64230,
+    "regression_nobs": 64244,
     "regression_companies": 691,
     "regression_months": 216,
-    "regression_r2": 0.187073398485897,
-    "regression_adjusted_r2": 0.17541632809574514,
-    "regression_within_r2": 0.0005663555907784446,
+    "regression_r2": 0.1871769069969531,
+    "regression_adjusted_r2": 0.17552389731120643,
+    "regression_within_r2": 0.0005938210481749584,
     "incomplete_company_quarters_excluded": 608,
     "matched_banks_in_stock_analysis": 1706,
     "matched_companies_in_stock_analysis": 691,
     "first_return_month": "2000-01-01",
     "last_return_month": "2017-12-01",
-    "index_last_value": 139.7271942300791,
+    "index_last_value": 139.72709738650912,
     "publication_delay_days": 120,
     "regression_table": "data/question1/stock_return_regression.csv",
     "price_figure": "report/figures/bank_stock_price_index.pdf",
-    "method": "Direct RSSD links take priority over BHC links; ambiguous company links excluded. US ordinary common shares on all identified CRSP listing exchanges (N/A/Q/R/B/I). Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. Quarter-end +120 days is an assumed publication date, not an observed filing date. Company and month fixed effects; SE clustered by company and month. ROA and capital ratios winsorized at .5/99.5 percentiles within accounting quarter; returns untrimmed.",
+    "method": "Direct RSSD links take priority over BHC links; ambiguous company links excluded. US ordinary common shares on all identified CRSP listing exchanges (N/A/Q/R/B/I). Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. Quarter-end +120 days is an assumed publication date, not an observed filing date. Links must remain valid through the latest CRSP monthly return date among retained share classes. Company and month fixed effects; SE clustered by company and month. ROA and capital ratios winsorized at .5/99.5 percentiles within accounting quarter; returns untrimmed.",
     "crsp_reference": "https://wrds-www.wharton.upenn.edu/pages/wrds-research/macros/crsp-ciztosiz-macro/"
   },
   "without_winsorization": {
@@ -225,17 +234,8 @@
     }
   },
   "reported_time_minutes": {
-    "part1": 20,
-    "part2": 90,
-    "part3": 90
-  },
-  "bank_inference": {
-    "null": "Sum of four policy slopes equals zero for each bank and outcome",
-    "hac_lags": 4,
-    "covariance": "Calendar-quarter Bartlett HAC with n/(n-5) correction",
-    "reference_distribution": "Two-sided asymptotic normal (one-restriction Wald)",
-    "alpha": 0.05,
-    "multiple_testing": "Unadjusted",
-    "unavailable_tests": "Excluded from inference summaries, retained in beta distributions"
+    "part1": 120,
+    "part2": 240,
+    "part3": 180
   }
 }

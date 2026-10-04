@@ -144,7 +144,7 @@ def read_stock(companies):
         s = chunk.loc[chunk.PERMCO.isin(companies) & chunk.YYYYMM.between(198401, 201712)].copy()
         selected_rows += len(s)
         s["month"] = pd.to_datetime(s.YYYYMM.astype(str), format="%Y%m")
-        for column in ["SecInfoStartDt", "SecInfoEndDt", "MthPrevDt"]:
+        for column in ["SecInfoStartDt", "SecInfoEndDt", "MthPrevDt", "MthCalDt"]:
             s[column] = pd.to_datetime(s[column])
 
         # 2. Match security history at month start and retain US ordinary common
@@ -166,23 +166,25 @@ def read_stock(companies):
     n_duplicates = int(stock.duplicated(keys).sum())
     stock = stock.drop_duplicates(keys).copy()
 
-    # 4. Require finite returns >= -1 and a positive prior capitalization dated
-    # in the immediately preceding calendar month; a -100% return is retained.
+    # 4. Require a return date in this month, finite returns >= -1, and positive
+    # capitalization dated in the preceding month; a -100% return is retained.
     for column in ["MthRet", "MthRetx", "MthPrevCap"]:
         stock[column] = pd.to_numeric(stock[column], errors="coerce")
     valid = np.isfinite(stock[["MthRet", "MthRetx", "MthPrevCap"]]).all(axis=1)
     valid &= stock.MthPrevCap.gt(0) & stock.MthRet.ge(-1) & stock.MthRetx.ge(-1)
+    valid &= stock.MthCalDt.dt.to_period("M").eq(stock.month.dt.to_period("M"))
     valid &= stock.MthPrevDt.dt.to_period("M").eq(stock.month.dt.to_period("M") - 1)
     dropped = int((~valid).sum())
     stock = stock.loc[valid].copy()
 
     # 5. Weight PERMNO share classes by lag capitalization within each company.
-    # MthRet supplies total returns; MthRetx supplies the ex-dividend price returns.
+    # Keep the latest CRSP return date so link checks cover every retained share class.
     stock["weighted_return"] = stock.MthRet * stock.MthPrevCap
     stock["weighted_price_return"] = stock.MthRetx * stock.MthPrevCap
     company = stock.groupby(["PERMCO", "month"]).agg(
         lag_cap=("MthPrevCap", "sum"), return_numerator=("weighted_return", "sum"),
-        price_numerator=("weighted_price_return", "sum"), n_share_classes=("PERMNO", "nunique")
+        price_numerator=("weighted_price_return", "sum"), n_share_classes=("PERMNO", "nunique"),
+        return_date=("MthCalDt", "max")
     ).reset_index().rename(columns={"PERMCO": "permco"})
     company["return"] = company.return_numerator / company.lag_cap
     company["price_return"] = company.price_numerator / company.lag_cap
@@ -205,10 +207,9 @@ def available_panel(company, returns):
         allow_exact_matches=False,
     )
 
-    # 2. Require all constituent links to survive through month-end and accounts
+    # 2. Require all constituent links to survive through the CRSP return date and accounts
     # no more than 365 days old at month start; discard failed matches without fallback.
-    month_end = joined.month + pd.offsets.MonthEnd(0)
-    usable = joined.available_date.notna() & month_end.le(joined.valid_until)
+    usable = joined.available_date.notna() & joined.return_date.le(joined.valid_until)
     usable &= (joined.month - joined.quarter_end).dt.days.le(365)
     joined = joined.loc[usable].copy()
     if not joined.available_date.lt(joined.month).all():
@@ -305,6 +306,7 @@ def run_market(bank_panel, output_dir, figure_dir):
                   "US ordinary common shares on all identified CRSP listing exchanges (N/A/Q/R/B/I). "
                   "Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. "
                   "Quarter-end +120 days is an assumed publication date, not an observed filing date. "
+                  "Links must remain valid through the latest CRSP monthly return date among retained share classes. "
                   "Company and month fixed effects; SE clustered by company and month. "
                   "ROA and capital ratios winsorized at .5/99.5 percentiles within accounting quarter; returns untrimmed.",
         "crsp_reference": "https://wrds-www.wharton.upenn.edu/pages/wrds-research/macros/crsp-ciztosiz-macro/"}
