@@ -299,7 +299,8 @@ def run_market(bank_panel, output_dir, figure_dir):
         "matched_companies_in_stock_analysis": int(panel.permco.nunique()),
         "first_return_month": str(panel.month.min().date()), "last_return_month": str(panel.month.max().date()),
         "index_last_value": float(index.price_index.iloc[-1]), "publication_delay_days": PUBLICATION_DAYS,
-        "regression_table": str(table_path), "price_figure": str(figure_path),
+        "regression_table": str(table_path.relative_to(ROOT)),
+        "price_figure": str(figure_path.relative_to(ROOT)),
         "method": "Direct RSSD links take priority over BHC links; ambiguous company links excluded. "
                   "US ordinary common shares on all identified CRSP listing exchanges (N/A/Q/R/B/I). "
                   "Company accounts sum matched commercial-bank subsidiaries, not consolidated holding-company accounts. "

@@ -26,6 +26,9 @@ __pycache__/
 /data/processed/
 /data/optional_inference/
 /data/question1/*.csv.gz
+/data/question2/*.csv.gz
+/final_submission/
+/final_submission.zip
 
 # LaTeX build files; keep report source, final PDF, and figure PDFs
 *.aux

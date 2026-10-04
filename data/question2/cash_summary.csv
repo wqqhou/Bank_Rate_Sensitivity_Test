@@ -1,0 +1,8 @@
+Metric,Value
+Eligible banks,10560.0
+Mean cumulative beta,-0.21009656272743524
+Median cumulative beta,-0.15755450572219432
+Median HAC standard error,0.37818960221160647
+Banks with cumulative $p<0.05$ (\%),7.149621212121213
+Median $R^2$,0.04637741805861767
+Median adjusted $R^2$,-0.00298678771991967
