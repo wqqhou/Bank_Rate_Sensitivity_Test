@@ -1,0 +1,232 @@
+===== PAGE 1 =====
+Technical Code Test
+Bank Interest-Rate Sensitivity
+Overview
+This test requires basic knowledge of corporate finance, monetary policy, and banking.
+This test assesses core empirical skills, including data preparation and analysis, clear
+presentation and summary of results, and the use of economic reasoning to interpret
+evidence.
+The test has two questions. Question 1 has three parts: describe the provided data, estimate
+two interest-rate sensitivities for each bank, and then use the estimated sensitivities in
+across-bank regressions and link the banks to stock market data. Question 2 is an open-
+ended extension.
+Question 1 uses the four provided filescallreports_1984_2017.dta, FedFunds.csv, Bank_
+and_CRSP_Linking_Table.csv, andCRSP_Monthly_Stock_File.csv.
+Logistics
+1. Time.You may submit before the deadline. Record and report the time spent on each
+part at the end of your report; you do not need to complete all parts in one sitting.
+2. Use of artificial-intelligence tools.You may use artificial intelligence (AI) to assist
+you, but not as a substitute for your own thinking. You are responsible for the
+correctness of everything you submit. Submissions will be screened for AI-generated
+content, and an excessive share of it will lower your score.
+3. Writing and formatting.You may write the report using any word processor or
+typesetting system, such as LaTeX, Microsoft Word, or Google Docs. The final report
+must be submitted as either a Word document (.docx) or a PDF file. The report must
+be typed; handwritten submissions are not accepted. The report should beno more
+than 20 pages.
+4. Programming language and statistical tools.You may use any programming lan-
+guage or statistical package, such as Python, the R programming language, Stata,
+Julia, or matrix-laboratory software (MATLAB). The code must run from the provided
+raw files to every reported result without manual deletion, copying, or editing of
+observations. Include concise comments explaining important steps.
+1
+
+===== PAGE 2 =====
+5. No collaboration.Do not consult another person about this task. All analysis and
+writing must be your own work.
+6. Open-ended work.Question 2 intentionally has no single correct answer. Define
+variables and modeling choices as needed and justify them briefly. Evaluation will
+emphasize economic reasoning and empirical execution rather than any particular
+significance threshold.
+7. Assumptions.If an instruction or variable is unclear, state a reasonable assumption,
+explain why it is appropriate, and continue. Do not silently change the sample or
+variable definitions.
+8. Deliverables.Keep the submission folder clearly organized and include a README
+file (a short guide to the submitted materials). Submit the report as a .docx or PDF
+file.
+2
+
+===== PAGE 3 =====
+Data and Empirical Guidelines
+The file callreports_1984_2017.dta contains repeated quarterly observations for indi-
+vidual commercial banks, including bank identifiers, calendar quarter, quarterly average
+assets, total interest income, total interest expense, and net income. The file FedFunds.csv
+provides the monthly effective federal funds rate.
+Throughout the analysis:
+1. Explain how you treat missing values and extreme observations, and state the criteria
+used for each decision.
+2. Consider whether fixed effects can and should be included in each regression. Explain
+what they would absorb and how their inclusion would affect the estimates and
+interpretation.
+3. Empirical results may vary across reasonable data treatments and model choices. Use
+the approach you consider most reliable, explain why, and interpret the findings using
+economic reasoning.
+Question 1[60 points]
+Part 1. Data Audit and Descriptive Evidence[10 points]
+1. Provide one descriptive-statistics table summarizing the main variables used in the
+analysis.
+2. Produce informative figures illustrating changes in the banking industry over time
+and the extent of missing values in the data.
+3. In no more than 500 words, summarize the main patterns, important data limitations,
+and any choices that could materially affect the later regressions.
+Part 2. Bank-Level Interest Income and Expense Betas[20 points]
+Economic meaning
+For this task, a bank’sinterest income betaandinterest expense betameasure how
+sensitive the rates it earns on its assets and pays on its funding are to changes in the federal
+funds rate. A larger beta means that the corresponding rate responds more strongly to
+changes in short-term interest rates, while a smaller beta means that it responds less.
+3
+
+===== PAGE 4 =====
+Step-by-step construction
+For bank i in quarter t, construct the outcome variable yi,t as one of the following two
+annualized rates:
+IncRatei,t =4×
+quarterly total interest incomei,t
+quarterly average assetsi,t
+, (1)
+ExpRatei,t =4×
+quarterly total interest expensei,t
+quarterly average assetsi,t
+. (2)
+Use yi,t =IncRate i,t when estimating the interest income beta and yi,t =ExpRate i,t when
+estimating the interest expense beta.
+The factor of four converts a quarterly rate to an annualized rate. If ratios are initially in
+decimals, multiply by 100 so they are measured in percentage points.
+Then complete the following steps.
+1. Sort the data by bank and calendar quarter. Define first differences
+∆yi,t =y i,t−y i,t−1,∆f t =f t−f t−1,
+where ft is the federal funds rate in the final month of quarter t. A first difference is
+the change from the immediately preceding calendar quarter.
+2. For each bank, estimate the following time-series regression separately for y∈
+{IncRate, ExpRate}:
+∆yi,t =a y
+i +
+3
+∑
+τ=0
+by
+i,τ ∆f t−τ +u y
+i,t. (3)
+The contemporaneous term has τ= 0; the other terms are the previous one, two, and
+three quarterly changes. The four coefficients allow the response to build over one
+year.
+Hint:Consider whether each bank has enough usable quarterly observations to
+estimate its betas reliably.
+3. For each bank, sum the four estimated coefficients:
+bβy
+i =
+3
+∑
+τ=0
+bby
+i,τ. (4)
+This produces the two required core estimates, bβInc
+i and bβExp
+i , for every eligible bank.
+Submit a cleaned bank-level dataset containing one row for each bank and that bank’s
+estimated interest income and interest expense betas. Use tables or figures as appropriate
+to summarize the bank-level estimates, and discuss the results in no more than 1,000
+words.
+4
+
+===== PAGE 5 =====
+Part 3. Cross-Sectional Analysis and Market Data[30 points]
+Sections A and B usecross-sectional regressions, meaning regressions with one observation
+per bank; estimate them by ordinary least squares (OLS). Section C connects the banks to
+stock market data.
+A. Relationship between income and expense sensitivities
+Estimate
+bβInc
+i =α+γ bβExp
+i +ε i. (5)
+Here γ summarizes the cross-sectional relationship between the two estimated sensitivities.
+Present the results in a professional regression table. Report the slope, intercept, t-statistics
+in parentheses, number of banks, and adjusted R2. Choose and justify how you calculate
+standard errors. In the text:
+1. interpret the slope and intercept in economic units;
+2. explore whether the relationship differs across banks of different sizes; and
+3. use your empirical results to provide economic analysis and interpretation.
+Also provide a scatter plot or binned scatter plot of income beta against expense beta. A
+binned scatter plot groups observations by expense beta and plots the mean expense and
+income beta within each group. Explain your plotting choices and add the fitted OLS line.
+B. Interest sensitivity of profitability
+Return on assets (ROA) is net income divided by assets. Construct the annualized outcome
+variable
+ROAi,t =4×
+quarterly net incomei,t
+quarterly average assetsi,t
+, (6)
+measured in percentage points, and obtain bβROA
+i by applying the three steps of Part 2 to
+yi,t =ROA i,t.
+Hint:Think carefully about how quarterly reporting patterns may affect the construction
+of quarterly net income before estimating its sensitivity.
+Then estimate
+bβROA
+i =α+γ bβExp
+i +ε i. (7)
+Present the results as in Part A: a professional regression table and a scatter or binned
+scatter plot with the fitted line. Examine whether the relationship differs across banks of
+different sizes, and provide an economic interpretation.
+5
+
+===== PAGE 6 =====
+C. Share prices of the publicly traded banks
+1. Use Bank_and_CRSP_Linking_Table.csv to link the bank panel to the monthly stock
+file, using either the bank’s own identifier (idrssd) or its holding company’s identifier
+(bhc_id). Report the number of matched banks and distinct listed companies.
+2. Plot one series showing how the share prices of publicly traded banks moved over
+time, and explain how you built it.
+3. Examine whether and how bank characteristics are related to bank stock returns.
+Report the regression in a professional table and interpret the results.
+Hint:Where several banks map to the same listed company, combine their accounting data
+into one company-level record. Explain your aggregation method for different variables
+and its limitations. Conduct the remaining steps at the listed-company level. Make sure
+the accounting data matched to each stock return were already public when that return
+was earned.
+6
+
+===== PAGE 7 =====
+Question 2. Open-Ended Extension[40 points]
+Choose one case, pattern, or economic question that you find interesting. Use the data
+from Question 1 and, if useful, merge them with one or more of the sources listed below or
+with another credible dataset. The topic is open: it may concern bank failures, mergers,
+organizational changes, balance-sheet composition, market outcomes, or any other phe-
+nomenon that can be studied using the available data. For example, you could use a figure
+to show how banks’ return on assets changed during the global financial crisis.
+Your submission should:
+1. state the question and explain why it is economically interesting;
+2. identify every dataset and describe the data preparation and matching procedure
+clearly, including the identifiers and dates used to connect the files, the treatment of
+duplicates and unmatched observations, the sample restrictions, and the construction
+of the main variables;
+3. present the evidence in the form best suited to the question, such as figures, descriptive
+statistics, regression results, or a combination; and
+4. explain what the evidence supports, what it does not establish, and which data or
+design limitations matter for the reliability of the conclusion.
+This question does not reward complexity for its own sake. A careful figure or a well-
+designed descriptive comparison may be more informative than a complicated regression.
+Evaluation will emphasize whether the analysis is correct and reproducible, whether the
+interpretation follows from the evidence, and whether the reliability of the conclusion is
+assessed thoughtfully. The written discussion must not exceed 2,000 words.
+Public data sources include:
+• Federal Reserve Bank of New York: Balance Sheets and Income Statements of Com-
+mercial Banks—balance-sheet, income-statement, and bank-identifier data.
+• Federal Financial Institutions Examination Council (FFIEC) National Information
+Center: Data Download—active and closed institutions, branches, ownership relation-
+ships, and transformations.
+• Additional CRSP data are available in the shared Dropbox folder, alongside the
+monthly stock file used in Part 3.
+7
+
+===== PAGE 8 =====
+Final Submission Checklist
+• A clearly organized folder containing the report, code, and processed results.
+• A README file explaining the folder structure and how to reproduce the analysis.
+Feedback (Optional)
+We would like to hear your thoughts on the design of this exam. Was it too hard, too easy,
+or too long? Did the assignment allow you to showcase your skill set? Are there important
+techniques you know that were not reflected here? A few sentences are sufficient.
+8
+

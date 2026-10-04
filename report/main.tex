@@ -1,0 +1,139 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.8in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,booktabs,graphicx,caption,float,microtype}
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=black]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\captionsetup{font=small,labelfont=bf}
+\input{numbers.tex}
+\begin{document}
+\begin{center}\Large Question 1: Bank Interest-Rate Sensitivity\end{center}
+\vspace{-0.5em}
+
+\section*{Part 1. Data audit and descriptive evidence}
+The accounting file contains \RawRows{} observations for \RawBanks{} banks, with unique bank--quarter keys and no missing identifiers. I retain commercial-bank records (\texttt{charter\_type = 200}), excluding \OtherCharters{} other or unclassified records.\footnote{Charter coding: \href{https://www.ffiec.gov/npw/StaticData/DataDownload/NPW\%20Data\%20Dictionary.pdf}{Federal Reserve NIC data dictionary}, charter-type definition.}
+The resulting unbalanced panel has \PanelRows{} observations for \PanelBanks{} banks over 1984Q1--2017Q4.
+
+Table~\ref{tab:descriptive} shows a strongly skewed size distribution. Figure~\ref{fig:industry} shows the number of reporting commercial banks falling from \BanksFirst{} to \BanksLast{}, while nominal assets rise from \$\AssetsFirst{} trillion to \$\AssetsLast{} trillion. This pattern is consistent with consolidation, although entry, exit, charter changes and inflation also affect the series; it does not identify mergers separately.
+
+I convert year-to-date (YTD) interest income, interest expense and net income into quarterly flows before imposing the charter restriction.\footnote{YTD reporting: \href{https://www.fdic.gov/system/files/2024-08/2008-06-ri.pdf}{FFIEC Schedule RI instructions}, general instructions.} Q1 equals the reported amount; later quarters equal current minus immediately preceding YTD amounts within the same year. A missing predecessor leaves the quarterly flow unavailable. Positive, finite average assets are required for rates. Negative quarterly interest flows are treated as unavailable because reporting resets or revisions can make them misleading; zero interest and negative net income remain valid.
+
+To limit the influence of extreme ratios, I cap income and expense rates at each quarter's 99.5th percentile and ROA at its 0.5th and 99.5th percentiles, before differencing. This preserves zero interest and ordinary losses but can attenuate genuine tail responses. Part 3 reports a check without these caps. No missing values are imputed. Figure~\ref{fig:missing} measures missingness among observed records; it excludes absent quarters. There are \Gaps{} internal gaps between retained bank reports. Bank exits, changing reporting populations and the later minimum-history requirement limit representativeness.
+
+\begin{table}[H]
+\centering
+\caption{Main descriptive statistics}\label{tab:descriptive}
+\resizebox{\textwidth}{!}{\input{../data/question1/descriptive_stats.tex}}
+\begin{minipage}{\textwidth}\footnotesize
+Bank variables use observed commercial-bank quarters. Dollar flows retain original deaccumulated amounts; rate levels and changes use the cleaning described above. Policy variables have one observation per quarter. Stock returns and log company assets use the final company--month sample. USD amounts are nominal; pp denotes percentage points. Missing percentages use the relevant observation unit, rather than a balanced panel.
+\end{minipage}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/industry.pdf}
+\caption{Commercial-bank counts and summed positive reported total assets.}\label{fig:industry}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/missingness.pdf}
+\caption{Missing or invalid raw inputs and unavailable constructed rates, by quarter. Rates also require quarterly flows and valid assets.}\label{fig:missing}
+\end{figure}
+
+\section*{Part 2. Bank-level income and expense betas}
+For quarterly flow $Q^y_{it}$ and quarterly average assets $A_{it}$, I construct
+\[
+ y_{it}=400\frac{Q^y_{it}}{A_{it}},\qquad
+ \Delta y_{it}=y_{it}-y_{i,t-1},\qquad
+ \Delta f_t=f_t-f_{t-1}.
+\]
+Rates and changes are in percentage points. A bank difference is valid only across consecutive calendar quarters, including Q4 to Q1. The policy rate $f_t$ is the supplied monthly rate for March, June, September or December, not a quarterly average. A complete quarterly policy calendar is merged many-to-one into the bank panel; 1983 observations construct the initial changes and lags.
+
+For each bank and each outcome, I estimate
+\[
+ \Delta y_{it}=a_i^y+\sum_{\tau=0}^{3}b^y_{i\tau}\Delta f_{t-\tau}+u^y_{it},
+ \qquad \widehat\beta_i^y=\sum_{\tau=0}^{3}\widehat b^y_{i\tau}.
+\]
+Income and expense regressions use the same finite observations within each bank. I require at least 40 usable quarters and full regressor rank: ten years of observations improves precision relative to fitting five parameters to very short histories, while retaining an unbalanced sample. This yields \CoreEligible{} banks; \CoreExcluded{} have insufficient observations. Each bank has its own intercept and slopes. Calendar-quarter fixed effects would absorb the common policy changes, preventing identification. The intercept is excluded from the beta sum.
+
+\begin{table}[H]
+\centering
+\caption{Distribution of estimated cumulative responses}\label{tab:betas}
+\input{../data/question1/beta_summary.tex}
+\begin{minipage}{0.94\textwidth}\footnotesize
+Equal weight per eligible bank; no filtering by statistical significance. ROA uses its own available quarters, with the same 40-quarter threshold. All betas are outcome percentage points per policy percentage point.
+\end{minipage}
+\end{table}
+
+Mean income and expense betas are \IncMean{} and \ExpMean{}; their medians are \IncMedian{} and \ExpMedian{}. A one-percentage-point permanent rise in the policy-rate level is therefore associated with \IncMean{} pp higher income rates and \ExpMean{} pp higher expense rates after four quarters for the average eligible bank. These are asset-scaled rates, so the expense beta is not a deposit-rate beta. Similar average responses suggest substantial offsetting repricing of income and costs. The estimates are descriptive: policy responds to economic conditions, banks face shared shocks, and bank-specific sample windows differ. The required one-row-per-bank income/expense estimates are in \texttt{bank\_betas.csv}.
+
+\section*{Part 3. Cross-sectional analysis and market data}
+\subsection*{A. Income and expense sensitivities}
+I estimate $\widehat\beta_i^{Inc}=\alpha+\gamma\widehat\beta_i^{Exp}+\varepsilon_i$ by OLS. Table~\ref{tab:cross} uses HC3 standard errors, which allow heteroskedasticity and adjust the variance estimate for observation leverage. They do not account for first-stage beta estimation error or common shocks across banks. Bank fixed effects would saturate this one-observation-per-bank regression; there is no common observation date for time effects.
+
+The slope of \IncAllSlope{} means that banks with a one-unit higher expense sensitivity have, on average, a \IncAllSlope{}-unit higher income sensitivity. Equivalently, their predicted income-rate response to a 1 pp policy increase is \IncAllSlope{} pp higher. At zero expense sensitivity, predicted income sensitivity is \IncAllIntercept{}. The positive association is consistent with banks matching asset repricing to funding costs, but does not establish active hedging or a causal effect of funding costs.
+
+For size comparisons, I average each bank's nominal assets over its shared income/expense estimation sample and split at the cross-section's median, \$\SizeCutoff{} million. The slope is \IncSmallSlope{} for smaller banks and \IncLargeSlope{} for larger banks. This suggests stronger comovement among larger banks, possibly reflecting different funding and asset mixes. Separate estimates describe heterogeneity; they do not establish a statistically significant difference between groups. Historical nominal size and different observation windows complicate the comparison.
+
+\begin{table}[H]
+\centering
+\caption{Cross-sectional relationships between bank sensitivities}\label{tab:cross}
+\input{../data/question1/cross_section_results.tex}
+\begin{minipage}{0.97\textwidth}\footnotesize
+OLS; HC3 $t$-statistics in parentheses. Small means average assets at or below the analysis-specific median; large means above it. All finite beta pairs are retained. Both analyses have the same paired-bank sample and size cutoff here.
+\end{minipage}
+\end{table}
+
+\subsection*{B. Interest sensitivity of profitability}
+I construct $ROA_{it}=400Q^{NI}_{it}/A_{it}$ using deaccumulated quarterly net income, preserving losses. Applying Part 2's regression and eligibility rules gives \RoaEligible{} ROA betas, with \CoreEligible{} banks also having expense betas. The average ROA beta is \RoaMean{} and the median is \RoaMedian{}, much smaller than the gross income and expense responses.
+
+In $\widehat\beta_i^{ROA}=\alpha+\gamma\widehat\beta_i^{Exp}+\varepsilon_i$, the slope is \RoaAllSlope{}: a one-unit higher expense beta is associated with a \RoaAllSlope{} pp greater ROA response to a 1 pp policy increase. The intercept is \RoaAllIntercept{} at zero expense sensitivity. The relationship is positive among larger banks (slope \RoaLargeSlope{}) and weak among smaller banks (\RoaSmallSlope{}). The full-sample adjusted $R^2$ is only \RoaAllRsq{}, so expense sensitivity explains little profitability heterogeneity. Loan losses, operating costs and noninterest income can offset gross interest repricing.
+
+Without rate winsorization, the income slope remains positive (\RawIncSlope{}, $t=\RawIncT$), but the ROA slope changes sign and is imprecise (\RawRoaSlope{}, $t=\RawRoaT$). The profitability relationship is therefore sensitive to extreme observations and should not be treated as robust.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/beta_relationships.pdf}
+\caption{Each point is the mean within an expense-beta quantile bin (20 bins). Lines are OLS fits to individual banks, displayed over the bin-mean range. Binning improves readability without removing beta outliers.}\label{fig:betas}
+\end{figure}
+
+\subsection*{C. Listed companies, share prices and returns}
+I match \texttt{idrssd}, then \texttt{bhc\_id} when no direct match exists, to the link table's RSSD identifier, requiring its dates to cover the accounting quarter-end. Direct matches take priority; competing company links would be excluded (none remain). This links \LinkedBanks{} banks to \LinkedCompanies{} companies across the accounting sample. After requiring valid stock observations, complete accounts and publication timing, \MarketBanks{} banks contribute to \MarketCompanies{} listed companies and \MarketObservations{} company--months, January 2000--December 2017. The supplied stock file starts in 2000.
+
+For banks mapping to one company, I sum total assets, equity, quarterly average assets and quarterly net income, then form ROA and capital ratios from those sums. I exclude \IncompleteGroups{} company--quarters with an invalid component among matched banks. Company size is log total assets; ROA and equity/assets are winsorized within quarter at 0.5\% and 99.5\%. These aggregates cover matched commercial subsidiaries, not consolidated holding-company accounts; missing subsidiaries, nonbank activities and intra-group positions limit coverage.
+
+Actual filing dates are unavailable. I assume accounts become public 120 days after quarter-end and use only reports whose assumed availability strictly precedes the return month. Reports older than one year are excluded. Links must remain valid through that month; records are not carried beyond a reported parent change. This conservative timing rule reduces look-ahead risk but cannot verify late filings or subsequent data revisions.
+
+I retain US ordinary common shares listed on NYSE, AMEX or Nasdaq, using security classifications valid at the return month's start.\footnote{Field mapping and ordinary-share classification follow the \href{https://wrds-www.wharton.upenn.edu/pages/wrds-research/macros/crsp-ciztosiz-macro/}{WRDS CRSP CIZ-to-SIZ documentation}.} Repeated security--month rows are removed only after confirming identical return and capitalization fields (\StockDuplicates{} duplicates). Missing or invalid returns and nonpositive or stale prior-month market capitalizations are excluded; valid returns, including $-100\%$, are not trimmed. Multiple share classes are combined using prior-month capitalization weights.
+
+Figure~\ref{fig:prices} chains monthly ex-dividend returns, first within companies and then across the available accounting-linked companies, with the same prior-month capitalization weights. December 1999 equals 100. This produces a comparable price index rather than averaging dollar share prices; it excludes cash dividends and changes composition as firms enter or exit. The series falls sharply during the financial crisis and recovers to \MarketLastIndex{} by December 2017.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.80\textwidth]{figures/bank_stock_price_index.pdf}
+\caption{Ex-dividend price index for companies with usable prior accounting data. December 1999 = 100.}\label{fig:prices}
+\end{figure}
+
+For monthly total stock return $r_{cm}$ in percentage points, I estimate
+\[
+ r_{cm}=\alpha_c+\lambda_m+\theta_1\log(Assets_{c,q(m)})
+       +\theta_2ROA_{c,q(m)}+\theta_3Capital_{c,q(m)}+e_{cm},
+\]
+where $q(m)$ denotes the latest eligible prior report. Company effects absorb persistent differences; month effects absorb common market movements. Standard errors are clustered by company and month to allow serial and contemporaneous dependence. The coefficients describe within-company associations conditional on common monthly shocks; a separate intercept is absorbed by the fixed effects.
+
+\begin{table}[H]
+\centering
+\caption{Company characteristics and subsequent monthly stock returns}\label{tab:market}
+\input{../data/question1/stock_return_regression.tex}
+\begin{minipage}{0.85\textwidth}\footnotesize
+OLS with company and month fixed effects; $t$-statistics use two-way clustered standard errors. ROA and equity/assets are in percentage points. Assets are measured in nominal USD thousands before taking logs. Adjusted $R^2$ includes the fixed effects.
+\end{minipage}
+\end{table}
+
+A one-log-unit increase in assets is associated with a \StockSize{} pp change in monthly returns; a 1 pp increase in equity/assets is associated with a \StockCapital{} pp change. Lower capital can coincide with greater leverage and risk compensation, but the estimates do not establish that mechanism. The ROA coefficient is \StockRoa{} pp per 1 pp of ROA and is imprecise. Accounting performance need not predict returns when prices already incorporate it. These are conditional associations, not a trading strategy or causal estimates; reporting delays, incomplete company coverage and changes in risk remain relevant.
+
+\paragraph{Time spent (reported).}
+Part 1: 20 minutes. Part 2: 1.5 hours. Part 3: 1.5 hours.
+
+\end{document}

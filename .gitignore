@@ -1,0 +1,44 @@
+# Python environments and caches
+.venv/
+venv/
+myenv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Local settings and temporary files
+.DS_Store
+._*
+.env
+.env.*
+!.env.example
+!.env.template
+*.swp
+*.swo
+*~
+
+# Supplied data, exploratory outputs, and generated panels
+/data/raw/
+/data/interim/
+/data/processed/
+/data/optional_inference/
+/data/question1/*.csv.gz
+
+# LaTeX build files; keep report source, final PDF, and figure PDFs
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.xdv
+
+# Keep code, requirements, README, and final CSV/JSON/TeX results tracked.

@@ -1,0 +1,8 @@
+# Tested with Python 3.11; direct analysis packages and numerical dependencies.
+numpy==2.4.6
+pandas==3.0.6
+scipy==1.17.1
+matplotlib==3.11.2
+statsmodels==0.15.0
+linearmodels==7.0
+Jinja2==3.1.6

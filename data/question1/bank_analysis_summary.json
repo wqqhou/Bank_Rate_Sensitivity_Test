@@ -1,0 +1,123 @@
+{
+  "n_bank_quarters": 1105619,
+  "n_banks": 17620,
+  "industry_first": {
+    "qdate": 96,
+    "banks": 13342.0,
+    "assets_trillion": 1.916642969
+  },
+  "industry_last": {
+    "qdate": 231,
+    "banks": 4114.0,
+    "assets_trillion": 13.336184379
+  },
+  "missing_percent": {
+    "Invalid average assets": 0.0031656474789235715,
+    "Income YTD": 0.27875787228692706,
+    "Expense YTD": 0.27875787228692706,
+    "Net income YTD": 0.27866742521610066,
+    "Income rate": 0.6307778719432282,
+    "Expense rate": 0.632858154572235,
+    "ROA": 0.48633389983348696
+  },
+  "cross_sections": [
+    {
+      "outcome": "beta_inc",
+      "sample": "All",
+      "nobs": 10399,
+      "adj_r2": 0.20567910492044916,
+      "size_cutoff_usd_thousand": 83436.95454545454,
+      "intercept": 0.12172813584941553,
+      "intercept_se": 0.008475861203041246,
+      "intercept_t": 14.361742474704272,
+      "intercept_pvalue": 2.492715975715729e-46,
+      "slope": 0.6960381607372365,
+      "slope_se": 0.02313376289682827,
+      "slope_t": 30.087546234541293,
+      "slope_pvalue": 9.073876930056717e-191
+    },
+    {
+      "outcome": "beta_inc",
+      "sample": "Small",
+      "nobs": 5200,
+      "adj_r2": 0.1420347874712119,
+      "size_cutoff_usd_thousand": 83436.95454545454,
+      "intercept": 0.13952166642257352,
+      "intercept_se": 0.012886469830659586,
+      "intercept_t": 10.826988947013442,
+      "intercept_pvalue": 4.972863582581293e-27,
+      "slope": 0.6120206565229114,
+      "slope_se": 0.03708843970636311,
+      "slope_t": 16.501655539257143,
+      "slope_pvalue": 1.1493644659077706e-59
+    },
+    {
+      "outcome": "beta_inc",
+      "sample": "Large",
+      "nobs": 5199,
+      "adj_r2": 0.2477328363464648,
+      "size_cutoff_usd_thousand": 83436.95454545454,
+      "intercept": 0.11786213475945118,
+      "intercept_se": 0.011526321392481761,
+      "intercept_t": 10.225477040431022,
+      "intercept_pvalue": 2.587574499407596e-24,
+      "slope": 0.7337274115033827,
+      "slope_se": 0.03026110978213428,
+      "slope_t": 24.246546699241176,
+      "slope_pvalue": 3.966691361819506e-123
+    },
+    {
+      "outcome": "beta_roa",
+      "sample": "All",
+      "nobs": 10399,
+      "adj_r2": 0.00244111432245131,
+      "size_cutoff_usd_thousand": 83436.95454545454,
+      "intercept": -0.025256527149154856,
+      "intercept_se": 0.013909371168977303,
+      "intercept_t": -1.8157921621565198,
+      "intercept_pvalue": 0.06943105141800278,
+      "slope": 0.14204025877615983,
+      "slope_se": 0.0388213117425991,
+      "slope_t": 3.6588217244678347,
+      "slope_pvalue": 0.0002546307953452378
+    },
+    {
+      "outcome": "beta_roa",
+      "sample": "Small",
+      "nobs": 5200,
+      "adj_r2": 8.911405091349689e-05,
+      "size_cutoff_usd_thousand": 83436.95454545454,
+      "intercept": 0.023889154655820432,
+      "intercept_se": 0.020635076119426287,
+      "intercept_t": 1.1576964639025822,
+      "intercept_pvalue": 0.24704111952317528,
+      "slope": -0.051479689829960006,
+      "slope_se": 0.06183543230805276,
+      "slope_t": -0.8325273699631895,
+      "slope_pvalue": 0.40514958322047073
+    },
+    {
+      "outcome": "beta_roa",
+      "sample": "Large",
+      "nobs": 5199,
+      "adj_r2": 0.00927733687866883,
+      "size_cutoff_usd_thousand": 83436.95454545454,
+      "intercept": -0.054311130891626064,
+      "intercept_se": 0.019990578517773853,
+      "intercept_t": -2.71683637586263,
+      "intercept_pvalue": 0.006612746358101729,
+      "slope": 0.26069645884195547,
+      "slope_se": 0.052621790655754876,
+      "slope_t": 4.954154079388876,
+      "slope_pvalue": 7.49483879052231e-07
+    }
+  ],
+  "methods": {
+    "standard_errors": "HC3; t statistics use coefficients divided by HC3 SEs",
+    "size": "Within-analysis median positive mean assets; small <= median, large > median",
+    "bins": "Up to 20 expense-beta quantile bins; ties may reduce their number; no beta trimming",
+    "industry": "Commercial-bank count and sum of positive reported nominal total assets",
+    "missingness": "Shares among observed records; absent bank-quarters are not counted",
+    "policy_descriptives": "One observation per calendar quarter, not repeated across banks"
+  }
+}
