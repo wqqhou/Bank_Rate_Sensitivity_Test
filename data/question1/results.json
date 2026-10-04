@@ -22,9 +22,13 @@
       "Banks": 10399,
       "Mean": 0.3691727072885274,
       "SD": 0.1592305406736448,
-      "P25": 0.2758381358508559,
-      "Median": 0.3542320534865422,
-      "P75": 0.44741375742366907
+      "P25": 0.2758381358508558,
+      "Median": 0.3542320534865424,
+      "P75": 0.44741375742366907,
+      "Median HAC SE": 0.08179786011523832,
+      "Significant (%)": 86.03711895374555,
+      "Valid tests": 10399,
+      "Unavailable tests": 0
     },
     "Expense beta": {
       "Banks": 10399,
@@ -32,15 +36,23 @@
       "SD": 0.10376933700865124,
       "P25": 0.2976185406547198,
       "Median": 0.351761472193644,
-      "P75": 0.409985565186334
+      "P75": 0.4099855651863339,
+      "Median HAC SE": 0.05220216660419478,
+      "Significant (%)": 95.74877368471675,
+      "Valid tests": 10397,
+      "Unavailable tests": 2
     },
     "ROA beta": {
       "Banks": 10439,
       "Mean": 0.024925126316914677,
       "SD": 0.2934883647681366,
-      "P25": -0.0858793610748887,
-      "Median": 0.007319825311525754,
-      "P75": 0.11024719873538613
+      "P25": -0.08587936107488878,
+      "Median": 0.007319825311525627,
+      "P75": 0.11024719873538633,
+      "Median HAC SE": 0.16650114027114246,
+      "Significant (%)": 2.797202797202797,
+      "Valid tests": 10439,
+      "Unavailable tests": 0
     }
   },
   "bank_analysis": {
@@ -216,5 +228,14 @@
     "part1": 20,
     "part2": 90,
     "part3": 90
+  },
+  "bank_inference": {
+    "null": "Sum of four policy slopes equals zero for each bank and outcome",
+    "hac_lags": 4,
+    "covariance": "Calendar-quarter Bartlett HAC with n/(n-5) correction",
+    "reference_distribution": "Two-sided asymptotic normal (one-restriction Wald)",
+    "alpha": 0.05,
+    "multiple_testing": "Unadjusted",
+    "unavailable_tests": "Excluded from inference summaries, retained in beta distributions"
   }
 }

@@ -16,6 +16,8 @@ MONEY = ["total_asset", "total_equity", "ave_asset", "net_income_q"]
 
 def link_accounts(bank_panel, links):
     """Prefer a direct RSSD match; exclude competing companies at that priority."""
+    # 1. Require unique bank-quarter records before matching. Convert Stata quarters
+    # to quarter-end dates; subtract 40 because pandas counts quarters from 1970.
     columns = ["idrssd", "qdate", "bhc_id"] + MONEY
     bank = bank_panel[columns].sort_values(["idrssd", "qdate"]).reset_index(drop=True).copy()
     if bank.duplicated(["idrssd", "qdate"]).any():
@@ -24,11 +26,16 @@ def link_accounts(bank_panel, links):
     bank["quarter_end"] = pd.PeriodIndex.from_ordinals(
         bank.qdate.astype(int) - 40, freq="Q"
     ).to_timestamp(how="end").normalize()
+
+    # 2. Bound BHC membership conservatively when the next report changes parent.
+    # Without an exact change date, expire the old mapping at its last old-parent report.
     parent = bank.bhc_id.fillna(0)
     next_parent = parent.groupby(bank.idrssd).shift(-1)
     change = next_parent.notna() & next_parent.ne(parent)
-    # Parent changes have no exact effective date: stop at the last old-parent report.
     bank["parent_until"] = bank.quarter_end.where(change).groupby(bank.idrssd).bfill()
+
+    # 3. Generate both direct-bank and BHC candidates. Keep only links whose
+    # inclusive start/end window contains the accounting quarter-end.
     candidates = []
     for priority, identifier in enumerate(["idrssd", "bhc_id"]):
         part = bank.loc[bank[identifier].isin(links.rssd9001)].merge(
@@ -38,24 +45,37 @@ def link_accounts(bank_panel, links):
         part["priority"] = priority
         candidates.append(part)
     matched = pd.concat(candidates, ignore_index=True)
+
+    # 4. Prefer direct links, then exclude competing PERMCOs at that priority.
+    # An ambiguous direct match is excluded; it does not fall back to the BHC route.
     both = matched.groupby("row").priority.nunique().eq(2)
     matched = matched.loc[matched.priority.eq(matched.groupby("row").priority.transform("min"))].copy()
     ambiguous = matched.groupby("row").permco.nunique().gt(1)
     matched = matched.loc[~matched.row.isin(ambiguous.index[ambiguous])].copy()
-    # Overlapping intervals for the SAME company are a continuous union at this quarter.
+
+    # 5. Combine overlapping links to the same company using their latest end.
+    # They all contain this quarter-end, so their union is continuous there.
     selected = matched.groupby(["row", "permco"], as_index=False).agg(
         link_end=("dt_end", "max"), priority=("priority", "min"), rssd9001=("rssd9001", "first")
     )
     matched = bank.merge(selected, on="row", how="inner", validate="one_to_one")
+
+    # 6. Limit each selected link to its recorded end and, for BHC matches,
+    # the conservative parent-change cutoff computed above.
     matched["valid_until"] = matched.link_end
     bhc = matched.priority.eq(1) & matched.parent_until.notna()
     matched.loc[bhc, "valid_until"] = matched.loc[bhc, ["link_end", "parent_until"]].min(axis=1)
-    # Do not carry a record into a later conflicting company-link interval.
+
+    # 7. Prevent an old record from entering a later conflicting company interval.
+    # For RSSDs linked to multiple companies, stop before the other link starts.
     changing_ids = links.groupby("rssd9001").permco.nunique()
     for rssd in changing_ids.index[changing_ids.gt(1)]:
         for link in links.loc[links.rssd9001.eq(rssd)].itertuples():
             mask = matched.rssd9001.eq(rssd) & matched.permco.ne(link.permco) & matched.quarter_end.lt(link.dt_start)
             matched.loc[mask, "valid_until"] = matched.loc[mask, "valid_until"].clip(upper=link.dt_start - pd.Timedelta(days=1))
+
+    # 8. Report coverage at the bank-quarter, bank, and company levels, along
+    # with rejected ambiguities and the route used for each retained match.
     audit = {
         "bank_quarters": len(bank), "bank_quarters_matched": len(matched),
         "matched_banks_all_years": int(matched.idrssd.nunique()),
@@ -69,8 +89,13 @@ def link_accounts(bank_panel, links):
 
 def company_accounts(matched):
     """Sum subsidiary amounts first; never average their accounting ratios."""
+    # 1. Require finite amounts and positive total/average assets for every
+    # matched subsidiary. Negative equity and quarterly net income remain valid.
     m = matched.copy()
     m["valid_financials"] = np.isfinite(m[MONEY]).all(axis=1) & m.total_asset.gt(0) & m.ave_asset.gt(0)
+
+    # 2. Sum amounts within PERMCO-quarter, excluding the whole group if any
+    # subsidiary fails validation; the earliest constituent expiry binds the group.
     keys = ["permco", "qdate"]
     amounts = m.groupby(keys)[MONEY].sum(min_count=1)
     info = m.groupby(keys).agg(
@@ -80,21 +105,32 @@ def company_accounts(matched):
     company = amounts.join(info).reset_index()
     n_incomplete = int((~company.complete).sum())
     company = company.loc[company.complete].copy()
+
+    # 3. Form ratios from the summed amounts: annual ROA uses average assets,
+    # capital uses total assets, and size is log nominal assets in USD thousands.
     company["roa_raw"] = 400 * company.net_income_q / company.ave_asset
     company["capital_raw"] = 100 * company.total_equity / company.total_asset
     company["log_assets"] = np.log(company.total_asset)
+
+    # 4. Limit ratio extremes only after aggregation, using each quarter's
+    # company-level 0.5th/99.5th percentiles; retain the unmodified ratios too.
     for variable in ["roa", "capital"]:
         grouped = company.groupby("qdate")[f"{variable}_raw"]
         company[variable] = company[f"{variable}_raw"].clip(
             grouped.transform(lambda x: x.quantile(.005)),
             grouped.transform(lambda x: x.quantile(.995)),
         )
+
+    # 5. Assume reports become available 120 days after quarter-end. This is
+    # a conservative timing convention, not an observed filing date.
     company["available_date"] = company.quarter_end + pd.Timedelta(days=PUBLICATION_DAYS)
     return company, n_incomplete
 
 
 def read_stock(companies):
     """Read selected fields in chunks and remove only verified duplicate records."""
+    # 1. Read only needed fields in bounded chunks, retaining linked companies
+    # in 1984–2017 while separately recording the source file's full coverage.
     fields = ["PERMNO", "PERMCO", "YYYYMM", "MthCalDt", "MthRet", "MthRetx",
               "MthPrevCap", "MthPrevDt", "SecInfoStartDt", "SecInfoEndDt",
               "USIncFlg", "IssuerType", "SecurityType", "SecuritySubType", "ShareType", "PrimaryExch"]
@@ -110,13 +146,18 @@ def read_stock(companies):
         s["month"] = pd.to_datetime(s.YYYYMM.astype(str), format="%Y%m")
         for column in ["SecInfoStartDt", "SecInfoEndDt", "MthPrevDt"]:
             s[column] = pd.to_datetime(s[column])
-        # Classify at the start of the holding month, retaining delisting-month returns.
+
+        # 2. Match security history at month start and retain US ordinary common
+        # shares (Y/CORP-or-ACOR/EQTY/COM/NS) on N/A/Q exchanges, preserving eligible delisting-month returns.
         s = s.loc[s.month.ge(s.SecInfoStartDt) & s.month.le(s.SecInfoEndDt)]
         ordinary = s.USIncFlg.eq("Y") & s.IssuerType.isin(["CORP", "ACOR"])
         ordinary &= s.SecurityType.eq("EQTY") & s.SecuritySubType.eq("COM") & s.ShareType.eq("NS")
         ordinary &= s.PrimaryExch.isin(["N", "A", "Q"])
         parts.append(s.loc[ordinary])
     stock = pd.concat(parts, ignore_index=True)
+
+    # 3. Verify duplicate PERMNO-month records agree on all monthly core fields.
+    # Stop on conflicting values; otherwise remove repeated distribution/history rows.
     keys = ["PERMNO", "month"]
     core = ["PERMCO", "MthCalDt", "MthRet", "MthRetx", "MthPrevCap", "MthPrevDt"]
     duplicates = stock.loc[stock.duplicated(keys, keep=False)]
@@ -124,6 +165,9 @@ def read_stock(companies):
         raise ValueError("Conflicting monthly stock records require investigation.")
     n_duplicates = int(stock.duplicated(keys).sum())
     stock = stock.drop_duplicates(keys).copy()
+
+    # 4. Require finite returns >= -1 and a positive prior capitalization dated
+    # in the immediately preceding calendar month; a -100% return is retained.
     for column in ["MthRet", "MthRetx", "MthPrevCap"]:
         stock[column] = pd.to_numeric(stock[column], errors="coerce")
     valid = np.isfinite(stock[["MthRet", "MthRetx", "MthPrevCap"]]).all(axis=1)
@@ -131,15 +175,20 @@ def read_stock(companies):
     valid &= stock.MthPrevDt.dt.to_period("M").eq(stock.month.dt.to_period("M") - 1)
     dropped = int((~valid).sum())
     stock = stock.loc[valid].copy()
+
+    # 5. Weight PERMNO share classes by lag capitalization within each company.
+    # MthRet supplies total returns; MthRetx supplies the ex-dividend price returns.
     stock["weighted_return"] = stock.MthRet * stock.MthPrevCap
     stock["weighted_price_return"] = stock.MthRetx * stock.MthPrevCap
-    # PERMCO is the company; multiple PERMNO share classes get lag-cap weights.
     company = stock.groupby(["PERMCO", "month"]).agg(
         lag_cap=("MthPrevCap", "sum"), return_numerator=("weighted_return", "sum"),
         price_numerator=("weighted_price_return", "sum"), n_share_classes=("PERMNO", "nunique")
     ).reset_index().rename(columns={"PERMCO": "permco"})
     company["return"] = company.return_numerator / company.lag_cap
     company["price_return"] = company.price_numerator / company.lag_cap
+
+    # 6. Preserve source coverage and exclusion counts so the stock selection
+    # can be reconciled with the company-month dataset returned for analysis.
     audit = {"raw_stock_rows": raw_rows, "raw_stock_first_month": first_month,
              "raw_stock_last_month": last_month, "linked_stock_rows_before_filters": selected_rows,
              "duplicate_security_month_rows_removed": n_duplicates,
@@ -148,11 +197,16 @@ def read_stock(companies):
 
 def available_panel(company, returns):
     """Use information available before the return begins; enforce link expiry."""
+    # 1. Attach the latest company accounts with availability strictly before
+    # return-month start; an exact same-day match is deliberately not allowed.
     joined = pd.merge_asof(
         returns.sort_values("month"), company.sort_values("available_date"),
         left_on="month", right_on="available_date", by="permco", direction="backward",
         allow_exact_matches=False,
     )
+
+    # 2. Require all constituent links to survive through month-end and accounts
+    # no more than 365 days old at month start; discard failed matches without fallback.
     month_end = joined.month + pd.offsets.MonthEnd(0)
     usable = joined.available_date.notna() & month_end.le(joined.valid_until)
     usable &= (joined.month - joined.quarter_end).dt.days.le(365)
@@ -163,16 +217,21 @@ def available_panel(company, returns):
 
 
 def fit_return_regression(panel):
+    """Relate monthly company returns to previously available bank characteristics."""
+    # 1. Express total returns in percentage points and absorb company/month
+    # effects; the regressors are log assets and the two accounting ratios in percent.
     from linearmodels.panel import PanelOLS
     variables = ["log_assets", "roa", "capital"]
     data = panel.set_index(["permco", "month"]).sort_index()
     fit = PanelOLS(100 * data["return"], data[variables], entity_effects=True, time_effects=True).fit(
         cov_type="clustered", cluster_entity=True, cluster_time=True, low_memory=True
     )
+
+    # 2. Report coefficient inference with clustering by both company and month.
+    # Adjusted R2 uses residual degrees of freedom after the absorbed effects and slopes.
     table = pd.DataFrame({"coefficient": fit.params, "std_error": fit.std_errors,
                           "t_stat": fit.tstats, "pvalue": fit.pvalues})
     table.index.name = "variable"
-    # Adjusted R2 after accounting for the absorbed effects and the three slopes.
     adjusted = 1 - (1 - fit.rsquared_inclusive) * (fit.nobs - 1) / fit.df_resid
     return table, {"regression_nobs": int(fit.nobs), "regression_companies": int(panel.permco.nunique()),
                    "regression_months": int(panel.month.nunique()), "regression_r2": float(fit.rsquared_inclusive),
@@ -180,19 +239,28 @@ def fit_return_regression(panel):
 
 
 def run_market(bank_panel, output_dir, figure_dir):
+    """Build Part 3C outputs and return the counts and estimates used in the report."""
+    # 1. Prepare output locations and unique dated RSSD-to-PERMCO link records.
     output_dir, figure_dir = Path(output_dir), Path(figure_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     figure_dir.mkdir(parents=True, exist_ok=True)
     links = pd.read_csv(ROOT / "data/raw/Bank_and_CRSP_Linking_Table.csv", parse_dates=["dt_start", "dt_end"])
     links = links[["permco", "rssd9001", "dt_start", "dt_end"]].drop_duplicates()
+
+    # 2. Match banks, aggregate accounting amounts, and combine share classes.
+    # The monthly panel then applies publication timing, link expiry, and report age.
     matched, audit = link_accounts(bank_panel, links)
     company, n_incomplete = company_accounts(matched)
     returns, stock_audit = read_stock(matched.permco.unique())
     panel = available_panel(company, returns)
+
+    # 3. Estimate the return model only after the company-month sample is fixed.
     if panel.empty:
         raise ValueError("No company-months satisfy stock and accounting timing restrictions.")
     table, regression_info = fit_return_regression(panel)
-    # A chain-linked price index uses ex-dividend returns, not raw price averages.
+
+    # 4. Form a lag-cap-weighted ex-dividend index on that same matched sample.
+    # Chain monthly price returns from 100 at the preceding month-end.
     index = panel.assign(numerator=panel.price_return * panel.lag_cap).groupby("month").agg(
         numerator=("numerator", "sum"), lag_cap=("lag_cap", "sum"), n_companies=("permco", "nunique")
     )
@@ -201,6 +269,9 @@ def run_market(bank_panel, output_dir, figure_dir):
     index.index = index.index + pd.offsets.MonthEnd(0)
     baseline = pd.DataFrame({"price_index": [100.]}, index=[index.index.min() - pd.offsets.MonthEnd(1)])
     price_path = pd.concat([baseline, index[["price_index"]]]).sort_index()
+
+    # 5. Save the price figure with month-end timestamps and an explicit
+    # ex-dividend label, distinguishing it from a dividend-reinvested return index.
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.plot(price_path.index, price_path.price_index, color="#174d72", linewidth=1.7)
     ax.set(ylabel="Ex-dividend price index (base 100)", xlabel="", title="Publicly traded banks: market-capitalization-weighted prices")
@@ -209,11 +280,17 @@ def run_market(bank_panel, output_dir, figure_dir):
     figure_path = figure_dir / "bank_stock_price_index.pdf"
     fig.savefig(figure_path)
     plt.close(fig)
+
+    # 6. Save company-level inputs, the monthly index, and regression estimates
+    # so report figures and tables can be traced to their underlying observations.
     panel.to_csv(output_dir / "company_month_panel.csv.gz", index=False, compression={"method": "gzip", "mtime": 0})
     company.to_csv(output_dir / "company_quarter_accounts.csv.gz", index=False, compression={"method": "gzip", "mtime": 0})
     index.to_csv(output_dir / "bank_stock_price_index.csv", index_label="month_end")
     table_path = output_dir / "stock_return_regression.csv"
     table.to_csv(table_path)
+
+    # 7. Count banks actually represented in the final stock sample separately
+    # from all dated matches, and record the aggregation/timing assumptions.
     used_pairs = panel[["permco", "qdate"]].drop_duplicates()
     used_banks = matched.merge(used_pairs, on=["permco", "qdate"], how="inner")
     result = {**audit, **stock_audit, **regression_info,

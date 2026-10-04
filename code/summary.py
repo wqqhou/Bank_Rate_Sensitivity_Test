@@ -1,3 +1,4 @@
+"""Legacy tables for the earlier unfiltered sample; the main report uses run_question1.py."""
 from html import escape
 from pathlib import Path
 import pandas as pd
@@ -5,12 +6,15 @@ import pandas as pd
 OUTCOMES = [("Interest income", "beta_inc"), ("Interest expense", "beta_exp")]
 
 def _finite_values(values):
+    """Exclude values that cannot be interpreted as finite numeric results."""
+    # 1. Coerce invalid text and infinite values to missing before computing summary statistics.
     return pd.to_numeric(values, errors="coerce").replace(
         [float("inf"), float("-inf")], float("nan")
     )
 
 def create_summary_table(results, alpha=0.05):
     """Give every estimated bank equal weight; use valid p-values for test shares."""
+    # 1. Require a probability cutoff and the saved beta/SE/p-value columns for both core outcomes.
     if not 0 < alpha < 1:
         raise ValueError("alpha must be strictly between zero and one.")
     required = ["nobs"]
@@ -20,16 +24,21 @@ def create_summary_table(results, alpha=0.05):
     if missing:
         raise ValueError(f"Beta results are missing columns: {missing}")
 
+    # 2. Summarize each outcome separately; finite betas enter its distribution even if its test is missing.
     records = []
     for name, column in OUTCOMES:
         beta = _finite_values(results[column])
         se = _finite_values(results[f"{column}_se"])
         pvalue = _finite_values(results[f"{column}_pvalue"])
         nobs = _finite_values(results["nobs"]).where(beta.notna())
+
+        # 3. Use finite betas with p-values in [0, 1] as the denominator; require p < alpha to reject.
         valid_test = beta.notna() & pvalue.between(0, 1, inclusive="both")
         significant = valid_test & pvalue.lt(alpha)
         tested_banks = int(valid_test.sum())
         quantiles = beta.quantile([0.01, 0.25, 0.5, 0.75, 0.99])
+
+        # 4. Keep effect distributions, precision and positive/negative rejections as separate summaries.
         records.append({
             "outcome": name,
             "count": int(beta.notna().sum()),
@@ -58,12 +67,15 @@ def create_summary_table(results, alpha=0.05):
     return pd.DataFrame(records).set_index("outcome")
 
 def _render_summary_html(summary, min_obs=40, hac_lags=4, alpha=0.05):
+    """Render the original exploratory HTML table and its method notes."""
+    # 1. Check that the displayed significance threshold agrees with the supplied summary.
     if min_obs < 6 or hac_lags < 0:
         raise ValueError("Require min_obs >= 6 and hac_lags >= 0.")
     if not summary["significance_level"].eq(alpha).all():
         raise ValueError("The table and its notes must use the same alpha.")
     threshold = f"{100 * alpha:g}%"
 
+    # 2. Format the across-bank distribution without restricting it to significant estimates.
     distribution_columns = {
         "count": "Banks", "mean": "Mean", "std": "SD",
         "min": "Min", "p25": "P25", "median": "Median",
@@ -78,6 +90,7 @@ def _render_summary_html(summary, min_obs=40, hac_lags=4, alpha=0.05):
                     "Median quarters": lambda value: f"{value:,.1f}"},
     )
 
+    # 3. Present available-test counts and rejection shares separately from distribution statistics.
     inference_columns = {
         "tested_banks": "Valid tests", "median_se": "Median HAC SE",
         "significant_count": f"Nominal p < {alpha:g}: banks",
@@ -92,6 +105,7 @@ def _render_summary_html(summary, min_obs=40, hac_lags=4, alpha=0.05):
         formatters={f"Nominal p < {alpha:g}: share": lambda value: f"{value:.1%}"},
     )
 
+    # 4. Attach the earlier unfiltered sample's method notes; these are not the main report's notes.
     notes = [
         f"Each estimated bank receives equal weight. Eligibility requires at least {min_obs} "
         "shared usable quarters and a full-rank design with an intercept and four policy slopes.",
@@ -108,6 +122,8 @@ def _render_summary_html(summary, min_obs=40, hac_lags=4, alpha=0.05):
         "is applied. The CSV also includes the 1st and 99th percentiles.",
     ]
     notes_html = "\n".join(f"<li>{escape(note)}</li>" for note in notes)
+
+    # 5. Place the two tables in a standalone, printable HTML document without editing their values.
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -139,7 +155,10 @@ th:first-child {{ text-align: left; }} thead th {{ background: #f1f5f9; }}
 
 def save_summary_table(summary, output_dir, min_obs=40, hac_lags=4, alpha=0.05):
     """Save the table as CSV and standalone HTML when explicitly called."""
+    # 1. Render the supplied summary with its matching threshold and HAC bandwidth.
     html = _render_summary_html(summary, min_obs=min_obs, hac_lags=hac_lags, alpha=alpha)
+
+    # 2. Save both machine-readable statistics and the legacy HTML display in the requested folder.
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "beta_summary.csv"

@@ -26,13 +26,15 @@ The main code files are:
 - `market.py`: applies dated bank/company links, aggregates accounting data and share classes, constructs the stock price index, and estimates the return regression.
 - `run_question1.py`: runs all parts and the sensitivity check, and prepares the report inputs.
 
+For review, start with `run_question1.py`, then follow its calls into `panel.py`, `estimation.py`/`inference.py`, `bank_analysis.py` and `market.py`. Numbered comments restart within each function and explain the purpose and actual selection or calculation at that step. The report states the corresponding fields, thresholds, dates and observation units; a missing derived value is distinguished from a dropped record.
+
 The baseline retains commercial-bank observations (`charter_type == 200`). Quarterly flows are constructed before that restriction. Rates require finite positive average assets; negative quarterly interest flows are unavailable, while zero interest and negative net income remain valid. Income and expense rates are capped at each quarter's 99.5th percentile; ROA is capped at its 0.5th and 99.5th percentiles. Differences are computed after this treatment. The sensitivity run omits these caps while retaining the other validity and sample rules.
 
 Bank regressions require 40 usable quarters and include an intercept, the current policy change and three lags. Income and expense use a common sample; ROA uses its own usable observations. Beta is the sum of the four policy coefficients. Part 3A/B uses HC3 standard errors and splits banks at the analysis-specific median average assets.
 
 The supplied stock file begins in 2000. Accounting information is assumed available 120 days after quarter-end and must precede the return month; actual filing dates are not supplied. The stock analysis combines bank reports at the listed-company level and accounts for dated links. Its methodology and limitations are described in the report.
 
-`inference.py` and `summary.py` retain optional earlier inference utilities. Cumulative-response HAC tests are not needed to reproduce the main report. To generate them separately:
+The main pipeline uses `inference.py` to test each cumulative beta against zero with four-calendar-quarter Bartlett HAC standard errors and two-sided asymptotic normal p-values. Table 2 includes median HAC standard errors and the percentage significant at the nominal 5% level, using available tests; unavailable tests remain separately identified. Means and medians retain all eligible estimates. These bank-level summaries do not test the cross-bank mean. `summary.py` is an earlier exploratory summary utility, unused by the main pipeline. To export a separate copy of the bank estimates and inference:
 
 ```sh
 code/venv/bin/python code/estimation.py --inference --output-dir data/optional_inference
