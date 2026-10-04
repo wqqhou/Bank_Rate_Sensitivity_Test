@@ -6,7 +6,6 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RATE_NAMES = ["interest_income", "interest_expense", "roa"]
 
-
 def add_differences(df):
     """Differences require the immediately preceding calendar quarter."""
     # 1. Subtract the previous rate within each bank only when quarter codes
@@ -15,7 +14,6 @@ def add_differences(df):
     for name in RATE_NAMES:
         df[f"{name}_dif"] = df.groupby("idrssd")[f"{name}_rate"].diff().where(adjacent)
     return df
-
 
 def y_construction(winsorize=True):
     """Construct quarterly flows and cleaned bank outcome rates."""
@@ -78,7 +76,6 @@ def y_construction(winsorize=True):
     df.attrs["audit"] = audit
     return df
 
-
 def f_construction():
     """Build complete quarterly policy changes and their three lags."""
     # 1. Select March, June, September and December monthly rates, as the prompt
@@ -106,7 +103,6 @@ def f_construction():
     f["qdate"] = (f.quarter.dt.year - 1960) * 4 + f.quarter.dt.quarter - 1
     return f.loc[f.qdate.ge(96)].drop(columns=["quarter", "_merge"])
 
-
 def panel_construction(winsorize=True):
     """Merge the bank outcomes with quarter-level policy regressors."""
     # 1. Build the chosen outcome treatment and left-merge policy by quarter;
@@ -121,7 +117,6 @@ def panel_construction(winsorize=True):
     panel.attrs["audit"] = banks.attrs["audit"]
     return panel
 
-
 def main():
     """Save the standalone panel-construction output."""
     # 1. Build the baseline panel and write a compressed interim CSV, creating
@@ -132,7 +127,6 @@ def main():
     panel.to_csv(output, index=False, compression={"method": "gzip", "mtime": 0})
     print(f"Saved {len(panel):,} bank-quarters to {output}")
     return panel
-
 
 if __name__ == "__main__":
     main()

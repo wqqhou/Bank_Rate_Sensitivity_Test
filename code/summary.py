@@ -152,7 +152,6 @@ th:first-child {{ text-align: left; }} thead th {{ background: #f1f5f9; }}
 </html>
 """
 
-
 def save_summary_table(summary, output_dir, min_obs=40, hac_lags=4, alpha=0.05):
     """Save the table as CSV and standalone HTML when explicitly called."""
     # 1. Render the supplied summary with its matching threshold and HAC bandwidth.
